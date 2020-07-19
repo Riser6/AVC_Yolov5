@@ -1,0 +1,11 @@
+#华为云第二届无人车挑战杯海选赛  --train&val 2951imgs
+
+# train and val datasets (image directory or *.txt file with image paths)
+train: ./dataset/HUAWEI_AVC/images/train/
+val: ./dataset/HUAWEI_AVC/images/val/
+
+# number of classes
+nc: 6
+
+# class names
+names: ['red_stop', 'green_go', 'yellow_back', 'pedestrian_crossing', 'speed_limited', 'speed_unlimited']

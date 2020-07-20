@@ -68,6 +68,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
 
 class LoadImages:  # for inference
     def __init__(self, path, img_size=640):
+        
         p = str(Path(path))  # os-agnostic
         p = os.path.abspath(p)  # absolute path
         if '*' in p:
@@ -78,7 +79,7 @@ class LoadImages:  # for inference
             files = [p]  # files
         else:
             raise Exception('ERROR: %s does not exist' % p)
-
+        #files=path
         images = [x for x in files if os.path.splitext(x)[-1].lower() in img_formats]
         videos = [x for x in files if os.path.splitext(x)[-1].lower() in vid_formats]
         ni, nv = len(images), len(videos)
@@ -93,7 +94,7 @@ class LoadImages:  # for inference
         else:
             self.cap = None
         assert self.nf > 0, 'No images or videos found in %s. Supported formats are:\nimages: %s\nvideos: %s' % \
-                            (p, img_formats, vid_formats)
+                            (path, img_formats, vid_formats)
 
     def __iter__(self):
         self.count = 0
@@ -124,18 +125,21 @@ class LoadImages:  # for inference
         else:
             # Read image
             self.count += 1
+            
             img0 = cv2.imread(path)  # BGR
+            #img0=Image.open(path)
             assert img0 is not None, 'Image Not Found ' + path
             print('image %g/%g %s: ' % (self.count, self.nf, path), end='')
 
         # Padded resize
+        #img0=np.array(img0)
         img = letterbox(img0, new_shape=self.img_size)[0]
 
         # Convert
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         img = np.ascontiguousarray(img)
 
-        # cv2.imwrite(path + '.letterbox.jpg', 255 * img.transpose((1, 2, 0))[:, :, ::-1])  # save letterbox image
+        cv2.imwrite(path + '.letterbox.jpg', 255 * img.transpose((1, 2, 0))[:, :, ::-1])  # save letterbox image
         return path, img, img0, self.cap
 
     def new_video(self, path):
@@ -416,10 +420,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
             pbar.desc = 'Scanning labels %s (%g found, %g missing, %g empty, %g duplicate, for %g images)' % (
                 cache_path, nf, nm, ne, nd, n)
-        if nf == 0:
-            s = 'WARNING: No labels found in %s. See %s' % (os.path.dirname(file) + os.sep, help_url)
-            print(s)
-            assert not augment, '%s. Can not train without labels.' % s
+        assert nf > 0, 'No labels found in %s. See %s' % (os.path.dirname(file) + os.sep, help_url)
 
         # Cache images into memory for faster training (WARNING: large datasets may exceed system RAM)
         self.imgs = [None] * n

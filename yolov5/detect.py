@@ -136,7 +136,7 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')	#选择你训练好的模型文件加载
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ma-user/work/Yolov5/model/yolov5/runs/exp7/weights/last.pt', help='model.pt path(s)')	#选择你训练好的模型文件加载
     parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='inference/output', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=1280, help='inference size (pixels)')

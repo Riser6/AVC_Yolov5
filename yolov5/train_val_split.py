@@ -12,6 +12,15 @@ txt_train_savepath = './dataset/HUAWEI_AVC/labels/train'
 img_val_savepath = './dataset/HUAWEI_AVC/images/val'
 txt_val_savepath = './dataset/HUAWEI_AVC/labels/val'
 
+if not os.path.exists(img_train_savepath):
+        os.makedirs(img_train_savepath)
+if not os.path.exists(txt_train_savepath):
+        os.makedirs(txt_train_savepath)
+if not os.path.exists(img_val_savepath):
+        os.makedirs(img_val_savepath)
+if not os.path.exists(txt_val_savepath):
+        os.makedirs(txt_val_savepath)
+
 total_txt = os.listdir(txtfilepath)
 total_img_label = os.listdir(imgfilepath)
 num = len(total_txt)

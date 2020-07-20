@@ -6,6 +6,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torch.utils.data
 from torch.utils.tensorboard import SummaryWriter
+import os
 
 import test  # import test.py to get mAP after each epoch
 from models.yolo import Model
@@ -20,6 +21,7 @@ except:
     print('Apex recommended for faster mixed precision training: https://github.com/NVIDIA/apex')
     mixed_precision = False  # not installed
 
+log_dir=''
 # Hyperparameters
 hyp = {'optimizer': 'SGD',  # ['adam', 'SGD', None] if none, default is SGD
        'lr0': 0.01,  # initial learning rate (SGD=1E-2, Adam=1E-3)
@@ -44,9 +46,9 @@ hyp = {'optimizer': 'SGD',  # ['adam', 'SGD', None] if none, default is SGD
 
 def train(hyp):
     print(f'Hyperparameters {hyp}')
+    global log_dir
     log_dir = tb_writer.log_dir if tb_writer else 'runs/evolution'  # run directory
     wdir = str(Path(log_dir) / 'weights') + os.sep  # weights directory
-
     os.makedirs(wdir, exist_ok=True)
     last = wdir + 'last.pt'
     best = wdir + 'best.pt'
@@ -119,7 +121,8 @@ def train(hyp):
 
         # load model
         try:
-            ckpt['model'] = {k: v for k, v in ckpt['model'].float().state_dict().items() if k in model.state_dict()}
+            ckpt['model'] = {k: v for k, v in ckpt['model'].float().state_dict().items()
+                             if model.state_dict()[k].shape == v.shape}  # to FP32, filter
             model.load_state_dict(ckpt['model'], strict=False)
         except KeyError as e:
             s = "%s is not compatible with %s. This may be due to model differences or %s may be out of date. " \
@@ -151,20 +154,20 @@ def train(hyp):
         model, optimizer = amp.initialize(model, optimizer, opt_level='O1', verbosity=0)
 
     # Distributed training
-    if device.type != 'cpu' and torch.cuda.device_count() > 1 and dist.is_available():
+    if device.type != 'cpu' and torch.cuda.device_count() > 1 and torch.distributed.is_available():
         dist.init_process_group(backend='nccl',  # distributed backend
                                 init_method='tcp://127.0.0.1:9999',  # init method
                                 world_size=1,  # number of nodes
                                 rank=0)  # node rank
-        # model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)  # requires world_size > 1
         model = torch.nn.parallel.DistributedDataParallel(model)
+        # pip install torch==1.4.0+cu100 torchvision==0.5.0+cu100 -f https://download.pytorch.org/whl/torch_stable.html
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
                                             hyp=hyp, augment=True, cache=opt.cache_images, rect=opt.rect)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
-    assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1)
+    assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Correct your labels or your model.' % (mlc, nc, opt.cfg)
 
     # Testloader
     testloader = create_dataloader(test_path, imgsz_test, batch_size, gs, opt,
@@ -185,7 +188,6 @@ def train(hyp):
     # model._initialize_biases(cf.to(device))
     plot_labels(labels, save_dir=log_dir)
     if tb_writer:
-        # tb_writer.add_hparams(hyp, {})  # causes duplicate https://github.com/ultralytics/yolov5/pull/384
         tb_writer.add_histogram('classes', c, 0)
 
     # Check anchors
@@ -193,7 +195,7 @@ def train(hyp):
         check_anchors(dataset, model=model, thr=hyp['anchor_t'], imgsz=imgsz)
 
     # Exponential moving average
-    ema = torch_utils.ModelEMA(model)
+    ema = torch_utils.ModelEMA(model, updates=start_epoch * nb / accumulate)
 
     # Start training
     t0 = time.time()
@@ -223,7 +225,7 @@ def train(hyp):
         pbar = tqdm(enumerate(dataloader), total=nb)  # progress bar
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
-            imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0 - 255 to 0.0 - 1.0
+            imgs = imgs.to(device).float() / 255.0  # uint8 to float32, 0 - 255 to 0.0 - 1.0
 
             # Warmup
             if ni <= nw:
@@ -359,11 +361,11 @@ def train(hyp):
 if __name__ == '__main__':
     check_git_status()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='models/yolov5s.yaml', help='model.yaml path')	#默认训练yolo5s模型，训练其他模型请修改
+    parser.add_argument('--cfg', type=str, default='models/yolov5l.yaml', help='model.yaml path')	#填写你选择的backbone的yaml文件
     parser.add_argument('--data', type=str, default='data/HUAWEI_AVC.yaml', help='data.yaml path')
     parser.add_argument('--hyp', type=str, default='', help='hyp.yaml path (optional)')
-    parser.add_argument('--epochs', type=int, default=50)		#训练轮次，默认为50轮
-    parser.add_argument('--batch-size', type=int, default=16)	#batchsize,视服务器显存占用调整
+    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--img-size', nargs='+', type=int, default=[1280, 1280], help='train,test sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const='get_last', default=False,
@@ -374,13 +376,13 @@ if __name__ == '__main__':
     parser.add_argument('--evolve', action='store_true', help='evolve hyperparameters')
     parser.add_argument('--bucket', type=str, default='', help='gsutil bucket')
     parser.add_argument('--cache-images', action='store_true', help='cache images for faster training')
-    parser.add_argument('--weights', type=str, default='weights/yolov5s.pt', help='initial weights path')	#默认训练yolo5s模型，训练其他模型请修改
+    parser.add_argument('--weights', type=str, default='weights/yolov5l.pt', help='initial weights path')	#填写你选择的backbone的对应预训练模型
     parser.add_argument('--name', default='', help='renames results.txt to results_name.txt if supplied')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     opt = parser.parse_args()
-
+   
     last = get_latest_run() if opt.resume == 'get_last' else opt.resume  # resume from most recent run
     if last and not opt.weights:
         print(f'Resuming training from {last}')
@@ -447,10 +449,11 @@ if __name__ == '__main__':
 
             # Write mutation results
             print_mutation(hyp, results, opt.bucket)
-
+            
+            
             # Plot results
             # plot_evolution_results(hyp)
-	model=torch.load('/home/ma-user/work/yolov5/runs/exp1/weights/best.pt', map_location=device)['model'].float().fuse().eval()  # load FP32 model
-    torch.save(model,"/home/ma-user/work/yolov5/runs/exp1/weights/best_convect.pt")
-	model=torch.load('/home/ma-user/work/yolov5/runs/exp1/weights/last.pt', map_location=device)['model'].float().fuse().eval()  # load FP32 model
-    torch.save(model,"/home/ma-user/work/yolov5/runs/exp1/weights/last_convect.pt")	#记得更改成你的项目对应的绝对路径，每次训练记得更改exp的序号
+    model=torch.load(os.path.abspath('.')+log_dir+'/weights/best.pt', map_location=device)['model'].float().fuse().eval()  # load FP32 model
+    torch.save(model,os.path.abspath('.')+log_dir+'/weights/best_convect.pt')
+    model=torch.load(os.path.abspath('.')+log_dir+'/weights/last.pt', map_location=device)['model'].float().fuse().eval()  # load FP32 model
+    torch.save(model,os.path.abspath('.')+log_dir+'/weights/last_convect.pt')

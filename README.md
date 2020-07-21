@@ -42,7 +42,7 @@ git clone https://github.com/Riser6/AVC_Yolov5.git
    pip install -r yolov5/requirements.txt
    ```
 
-   推荐：如果速度慢，可以尝试`sh requiments.sh`安装依赖库，其中脚本前两条指令仅针对使用`华为云modelarts`服务器的用户，指定服务器的`Cuda`版本，本地或者个人服务器用户请查看`Cuda`版本后，在`Pytorch`官网选好对应操作系统，对应`Cuda`版本的安装命令（记得去掉 -c）后执行
+   推荐：如果速度慢，可以尝试`sh requirements.sh`安装依赖库，其中脚本前两条指令仅针对使用`华为云modelarts`服务器的用户，指定服务器的`Cuda`版本，本地或者个人服务器用户请查看`Cuda`版本后，在`Pytorch`官网选好对应操作系统，对应`Cuda`版本的安装命令（记得去掉 -c）后执行
 
 3. 数据集准备
 
@@ -50,7 +50,7 @@ git clone https://github.com/Riser6/AVC_Yolov5.git
 
    在项目目录（`./yolov5`）下打开终端，键入`python labelconvect.py`运行已编写好的脚本，用于进行标签转化，将原`xml`类型的标签转化为`txt`类型的标签（Yolo项目要求），运行成功后可以检查data目录下面是否多出了`labelYOLOs`文件夹
 
-   然后在项目目录（`./yolov5`）下打开终端，键入`python train_val_split.py`运行已编写好的脚本，用于进行训练集和验证集的划分，若运行成功可以看见`dataset/HUAWEI_AVC`目录下对应文件夹下面已经有了图片和标签数据。（训练集和验证集按照`7:3`划分，若在正常训练结束后需要将验证集投入训练，直接对调`train`、`val`两个文件夹的名字，重新训练即可）
+   然后在项目目录（`./yolov5`）下打开终端，键入`python train_val_split.py`运行已编写好的脚本，用于进行训练集和验证集的划分，若运行成功可以看见`dataset/HUAWEI_AVC`目录，并且对应文件夹下面已经有了图片和标签数据。（训练集和验证集按照`7:3`划分，若在正常训练结束后需要将验证集投入训练，直接对调`train`、`val`两个文件夹的名字，重新训练即可）
 
 4. 配置文件修改（已完成）
 
@@ -64,11 +64,13 @@ git clone https://github.com/Riser6/AVC_Yolov5.git
 
 5. 预训练权重下载
 
-   前往`https://drive.google.com/drive/folders/1Drs_Aiu7xx6S-ix95f9kNsA6ueKRpN2J`下载预训练模型的权重文件（4个`pt`文件），上传放置在`weights`目录下
+   请直接下载我上传在大创群的模型文件，因为这个Yolo原项目在持续更新，貌似模型的兼容读取出了问题（之前版本的代码无法正常读取现在新更新的预训练模型，不对，是新版本的代码也无法正常读取新更新的预训练模型），保证`pt`模型放置在`yolov5/weights/`文件夹下(华为云用户参考注意事项)
 
-   或者直接运行/weights目录下面的`download_weights.sh`
+   不要前往`https://drive.google.com/drive/folders/1Drs_Aiu7xx6S-ix95f9kNsA6ueKRpN2J`下载预训练模型的权重文件（4个`pt`文件）
 
-   项目更新后貌似可以运行中直接下载对应模型的预训练权重
+   不要直接运行/weights目录下面的`download_weights.sh`
+   
+   不要在项目运行中自动下载对应模型的预训练权重
 
 ###### 训练模型
 
@@ -82,9 +84,7 @@ git clone https://github.com/Riser6/AVC_Yolov5.git
 python train.py
 ```
 
-每次训练都会在`run`文件夹下生成一个`exp`目录保存训练日志和训练模型结果，可以在目录下面查看训练日志信息，注意查看`result.jpg`中最后一个折线图（这是这次比赛的指标，若有超过当前成绩，可以考虑提交一波），另外每次训练会保存两个模型结果`best.pt`、`last.pt`(其中best是根据`yolo`项目制定的fitness函数计算，这个指标综合了召回率、精确率、`map`、`map0.5:0.95`,可以直接修改为根据`map0.5:0.95`保存最优模型)。为便于华为云平台发布，需要最后转化一下模型的保存（原项目的模型保存比较特殊，不适合华为云平台发布），记得按注释更改一下每次训练转化读取保存的路径（`train`函数最后几行）。
-
-###### 推理检测
+每次训练都会在`run`文件夹下生成一个`exp`目录保存训练日志和训练模型结果，可以在目录下面查看训练日志信息，注意查看`result.jpg`中最后一个折线图（这是这次比赛的指标，若有超过当前成绩，可以考虑提交一波），另外每次训练会保存两个模型结果`best.pt`、`last.pt`(其中best是根据`yolo`项目制定的fitness函数计算，这个指标综合了召回率、精确率、`map`、`map0.5:0.95`（原项目权重分配为[0,0,0.1,0.9]）,可以尝试直接修改为根据`map0.5:0.95`保存最优模型)。为便于华为云平台发布，需要最后转化一下模型的保存（原项目的模型保存比较特殊，不适合华为云平台发布），即用于平台发布的是`best_convect.pt`或者`last_convect.pt`文件
 
 在`inference/images`中上传放置你想要检测的图片，另外在记得更改`if __name__ == '__main__':`，你想要使用的模型文件
 
@@ -101,7 +101,16 @@ python train.py
    ```
    wget https://cnnorth1-modelarts-sdk.obs.cn-north-1.myhwclouds.com/modelarts-1.1.3-py2.py3-none-any.whl	#直接下载modelarts库的whl文件
    ls #查看当前目录下面是否已经有了该whl文件
-    pip install modelarts-1.1.3-py2.py3-none-any.whl #安装modelarts库
+   pip install modelarts-1.1.3-py2.py3-none-any.whl #安装modelarts库
+   python	#进入命令行python交互环境
+   
+   >>>from modelarts.session import Session
+   >>>session = Session()
+   #加载我上传在大创群的模型预训练权重，请提前将文件保存在OBS桶中，并且使得权重文件夹上传服务器之后，目录组织为yolov5/weights/pt文件,这里我是先删除weights文件夹，然后直接将OBS桶的wights文件夹传入的
+   >>>session.download_data(bucket_path="/riser-bucket1/weights/", path="/home/ma-user/work/AVC_Yolov5/yolov5/")	
+   #加载数据集，如上传的是压缩文件，上传后及时解压，使得目录组织为yolov5/data/labeled_data_backup/图片&xml注释
+   >>>session.download_data(bucket_path="/riser-bucket1/dataset/labeled_data_backup.zip", path="/home/ma-user/work/AVC_Yolov5/yolov5/data/labeled_data_backup.zip")	
    ```
 
-2. 其中项目目录(`./yolov5`)下面的`yolov5`文件夹为用于华为云平台模型导入的文件，项目clone之后可以将这个文件夹剪切到电脑本地，服务器端可以删除，每次模型发布只需要更改`yolov5/model/model.pt`(这个为训练后保存的且经过转化后的模型文件，即`best_convect.pt`或者`last_convect.pt`，理论上上传的文件夹model目录下面只能有一个pt模型文件)，配置文件和推理代码都无需更改，models和`uts`一些`py`文件也尽量不要用原项目对应文件夹下面的文件去替代，因为有些依赖库和部分代码进行了修改（为了适应华为云的发布环境），具体模型导入和发布请查看官方文档介绍。
+2. 其中项目目录(`./yolov5`)下面的`model`文件夹为用于华为云平台模型导入的文件，项目clone之后可以将这个文件夹剪切到电脑本地，服务器端可以删除，每次模型发布只需要更改`model/model.pt`(这个为训练后保存的且经过转化后的模型文件，即`best_convect.pt`或者`last_convect.pt`，理论上上传的文件夹model目录下面只能有一个pt模型文件)，配置文件和推理代码都无需更改，models和`uts`一些`py`文件也尽量不要用原项目对应文件夹下面的文件去替代，因为有些依赖库和部分代码进行了修改（为了适应华为云的发布环境），具体模型导入和发布请查看官方文档介绍。
+

@@ -7,3 +7,5 @@ labeled_data_v2/
 dataset/
 .DS_Store
 *.zip
+runs/
+.vscode/

@@ -4,7 +4,7 @@ import shutil
 
 train_percent = 0.7
 val_persent = 1-train_percent
-imgfilepath = './data/labeled_data_backup'
+imgfilepath = './data/labeled_data_v2'
 txtfilepath = './data/labelYOLOs'
 
 img_train_savepath = './dataset/HUAWEI_AVC/images/train'

@@ -21,7 +21,7 @@ def convert(size, box):
     return (x,y,w,h)
 
 def convert_annotation(rootpath,xmlname):
-    xmlpath = rootpath + '/labeled_data_backup'
+    xmlpath = rootpath + '/labeled_data_v2'
     xmlfile = os.path.join(xmlpath,xmlname)
     with open(xmlfile, "r") as in_file:
       txtname = xmlname[:-4]+'.txt'
@@ -50,7 +50,7 @@ def convert_annotation(rootpath,xmlname):
 
 if __name__ == "__main__":
     rootpath='./data'
-    xmlpath=rootpath + '/labeled_data_backup'
+    xmlpath=rootpath + '/labeled_data_v2'
     list=os.listdir(xmlpath)
     for i in range(0,len(list)) :
         path = os.path.join(xmlpath,list[i])

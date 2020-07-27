@@ -2,9 +2,9 @@ import os
 import random
 import shutil
 
-train_percent = 0.7
+train_percent = 0.3
 val_persent = 1-train_percent
-imgfilepath = './data/labeled_data_v2'
+imgfilepath = './data/labeled_data_v3'
 txtfilepath = './data/labelYOLOs'
 
 img_train_savepath = './dataset/HUAWEI_AVC/images/train'

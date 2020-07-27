@@ -3,8 +3,8 @@ import argparse
 import torch.backends.cudnn as cudnn
 
 from models.experimental import *
-from uts.datasets import *
-from uts.utils import *
+from utils.datasets import *
+from utils.utils import *
 
 
 def detect(save_img=False):
@@ -136,10 +136,10 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ma-user/work/Yolov5/model/yolov5/runs/exp7/weights/last.pt', help='model.pt path(s)')	#选择你训练好的模型文件加载
+    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='inference/output', help='output folder')  # output folder
-    parser.add_argument('--img-size', type=int, default=1280, help='inference size (pixels)')
+    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.4, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -156,6 +156,6 @@ if __name__ == '__main__':
         if opt.update:  # update all models (to fix SourceChangeWarning)
             for opt.weights in ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt', 'yolov3-spp.pt']:
                 detect()
-                create_pretrained(opt.weights, opt.weights)
+                strip_optimizer(opt.weights)
         else:
             detect()

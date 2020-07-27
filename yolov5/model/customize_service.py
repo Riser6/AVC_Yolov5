@@ -10,6 +10,7 @@ from uts.datasets import *
 from uts.utils import *
 import torch
 import torchvision.transforms as transforms
+from models.yolo import Model
 
 import os
 
@@ -25,12 +26,10 @@ class_dict={0:'red_stop',1:'green_go',2:'yellow_back',3:'pedestrian_crossing',4:
 class PTVisionService(PTServingBaseService):
 
     def __init__(self, model_name, model_path):
-        #super(PTVisionService, self).__init__(model_name, model_path)
+        super(PTVisionService, self).__init__(model_name, model_path)
         # 调用自定义函数加载模型
-        self.model=torch.load(model_path, map_location=device)
-        imgsz = check_img_size(1280, s=self.model.stride.max())
-        self.model.requires_grad_(False)
-        self.model.eval()
+        with torch.no_grad():
+            self.model = attempt_load(model_path, map_location=device)
 
     def _preprocess(self, data):
         # https两种请求形式
@@ -87,7 +86,7 @@ class PTVisionService(PTServingBaseService):
                     'detection_boxes': [],
                     'detection_scores': []
                     }
-                result.append(image_result)
+                results.append(image_result)
         return results
 
     def _postprocess(self, data):

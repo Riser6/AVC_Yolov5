@@ -4,6 +4,7 @@ __pycache__/
 *.pth
 labelYOLOs/
 labeled_data_v2/
+labeled_data_v3/
 dataset/
 .DS_Store
 *.zip
